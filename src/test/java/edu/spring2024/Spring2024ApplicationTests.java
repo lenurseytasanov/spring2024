@@ -1,4 +1,4 @@
-package java.spring2024;
+package edu.spring2024;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

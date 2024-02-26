@@ -1,4 +1,4 @@
-package java.spring2024;
+package edu.spring2024;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
