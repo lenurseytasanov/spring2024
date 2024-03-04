@@ -1,0 +1,16 @@
+spring:
+  profiles:
+    active: development
+server:
+  port: 8080
+---
+spring:
+  profiles: production
+server:
+  port: 8100
+---
+spring:
+  profiles: test
+server:
+  port: 8090
+
