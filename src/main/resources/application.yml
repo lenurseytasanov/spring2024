@@ -1,16 +1,41 @@
 spring:
   profiles:
     active: development
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: development
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
 server:
   port: 8080
+
 ---
+
 spring:
-  profiles: production
-server:
-  port: 8100
----
-spring:
-  profiles: test
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: false
 server:
   port: 8090
-
