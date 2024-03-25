@@ -13,6 +13,7 @@ function connect() {
 
 function sendMessage() {
     let message = document.getElementById('message').value;
+    console.log(message)
     stompClient.send("/app/message", {}, JSON.stringify({ 'content': message }));
 }
 
@@ -23,12 +24,13 @@ function showMessage(message) {
     chatArea.appendChild(p);
 }
 
-function registerUser(username) {
-    let username = document.getElementById('username').value;
-    stompClient.send("/app/register", {}, JSON.stringify({ 'username': username }))
-}
+//function registerUser(username) {
+//    let username = document.getElementById('username').value;
+//    stompClient.send("/app/register", {}, JSON.stringify({ 'username': username }))
+//}
 
 document.getElementById('sendBtn').addEventListener('click', function () {
+    console.log(message)
     sendMessage();
 });
 document.getElementById('regBtn').addEventListener('click', function () {

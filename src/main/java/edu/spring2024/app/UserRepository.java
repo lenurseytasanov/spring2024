@@ -1,7 +1,12 @@
 package edu.spring2024.app;
 
-import edu.spring2024.domain.ChatUser;
-import org.springframework.data.repository.CrudRepository;
+import edu.spring2024.domain.User;
 
-public interface UserRepository extends CrudRepository<ChatUser, Long> {
+import java.util.Optional;
+
+public interface UserRepository {
+
+    User save(User user);
+
+    Optional<User> findByUsername(String username);
 }

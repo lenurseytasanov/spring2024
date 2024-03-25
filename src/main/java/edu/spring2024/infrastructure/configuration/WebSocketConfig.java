@@ -1,4 +1,4 @@
-package edu.spring2024.infrastructure;
+package edu.spring2024.infrastructure.configuration;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

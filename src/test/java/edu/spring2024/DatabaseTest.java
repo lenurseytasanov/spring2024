@@ -1,14 +1,11 @@
 package edu.spring2024;
 
-import edu.spring2024.app.AuthService;
-import edu.spring2024.app.MessageRepository;
 import edu.spring2024.app.MessageService;
-import edu.spring2024.app.UserRepository;
-import edu.spring2024.domain.ChatUser;
+import edu.spring2024.app.UserService;
 import edu.spring2024.domain.Message;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
+import edu.spring2024.domain.User;
+import edu.spring2024.infrastructure.JpaMessageRepository;
+import edu.spring2024.infrastructure.JpaUserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,28 +18,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class DatabaseTest {
 
     @Autowired
-    private AuthService authService;
+    private UserService userService;
     @Autowired
     private MessageService messageService;
     @Autowired
-    private UserRepository userRepository;
+    private JpaUserRepository jpaUserRepository;
     @Autowired
-    private MessageRepository messageRepository;
+    private JpaMessageRepository jpaMessageRepository;
 
 
     @Test
     void userSavingTest() {
         // Arrange
-        ChatUser user1 = new ChatUser();
-        user1.setUsername("user1");
-        ChatUser user2 = new ChatUser();
-        user2.setUsername("user2");
+        User user1 = new User("user1", "pass");
+        User user2 = new User("user1", "pass");
 
         // Act
-        ChatUser returnedUser1 = authService.save(user1);
-        ChatUser returnedUser2 = authService.save(user2);
-        ChatUser savedUser1 = userRepository.findById(returnedUser1.getId()).orElseThrow();
-        ChatUser savedUser2 = userRepository.findById(returnedUser2.getId()).orElseThrow();
+        User returnedUser1 = userService.save(user1);
+        User returnedUser2 = userService.save(user2);
+        User savedUser1 = jpaUserRepository.findById(returnedUser1.getId()).orElseThrow();
+        User savedUser2 = jpaUserRepository.findById(returnedUser2.getId()).orElseThrow();
 
         // Assert
         assertEquals(returnedUser1.getUsername(), savedUser1.getUsername());
@@ -52,16 +47,14 @@ public class DatabaseTest {
     @Test
     void messageSavingTest() {
         // Arrange
-        Message message1 = new Message();
-        message1.setContent("message1");
-        Message message2 = new Message();
-        message2.setContent("message2");
+        Message message1 = new Message(null, null, "message1");
+        Message message2 = new Message(null, null, "message2");
 
         // Act
         Message returnedMessage1 = messageService.save(message1);
         Message returnedMessage2 = messageService.save(message2);
-        Message savedMessage1 = messageRepository.findById(returnedMessage1.getId()).orElseThrow();
-        Message savedMessage2 = messageRepository.findById(returnedMessage2.getId()).orElseThrow();
+        Message savedMessage1 = jpaMessageRepository.findById(returnedMessage1.getId()).orElseThrow();
+        Message savedMessage2 = jpaMessageRepository.findById(returnedMessage2.getId()).orElseThrow();
 
         // Assert
         assertEquals(returnedMessage1.getContent(), savedMessage1.getContent());
