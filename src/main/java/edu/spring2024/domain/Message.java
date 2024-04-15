@@ -23,25 +23,23 @@ public class Message {
     /**
      * отправитель сообщения
      */
-    @JsonIgnore
     @ManyToOne
     private User sender;
 
     /**
-     * получатель сообщения
+     * чат сообщения
      */
-    @JsonIgnore
     @ManyToOne
-    private User recipient;
+    private Chat chat;
 
     /**
      * текст сообщения
      */
     private String content;
 
-    public Message(User sender, User recipient, String content) {
+    public Message(User sender, Chat chat, String content) {
         this.sender = sender;
-        this.recipient = recipient;
+        this.chat = chat;
         this.content = content;
     }
 }

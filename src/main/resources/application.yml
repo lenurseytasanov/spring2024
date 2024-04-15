@@ -3,11 +3,18 @@ spring:
     active: development
 
 ---
-logging.level.org.springframework.web: DEBUG
+
+logging.level.org.springframework.web: trace
 spring:
   config:
     activate:
       on-profile: development
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8282/realms/test
+          jwk-set-uri: http://localhost:8282/realms/test/protocol/openid-connect/certs
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
