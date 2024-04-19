@@ -1,16 +1,14 @@
 package edu.spring2024.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * Класс представляет сообщение в чате
  */
 @Entity
 @Getter @NoArgsConstructor
+@RequiredArgsConstructor
 public class Message {
 
     /**
@@ -24,22 +22,29 @@ public class Message {
      * отправитель сообщения
      */
     @ManyToOne
+    @JoinColumn(name = "sender_id")
+    @Setter
     private User sender;
+
+    /**
+     * Получатель сообщения
+     */
+    @ManyToOne
+    @JoinColumn(name = "recipient_id")
+    @Setter
+    private User recipient;
 
     /**
      * чат сообщения
      */
     @ManyToOne
+    @JoinColumn(name = "chat_id")
+    @Setter
     private Chat chat;
 
     /**
      * текст сообщения
      */
+    @NonNull
     private String content;
-
-    public Message(User sender, Chat chat, String content) {
-        this.sender = sender;
-        this.chat = chat;
-        this.content = content;
-    }
 }

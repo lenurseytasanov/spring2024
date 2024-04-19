@@ -1,4 +1,4 @@
-package edu.spring2024.infrastructure.dto;
+package edu.spring2024.infrastructure.dto.chat;
 
 import lombok.Data;
 

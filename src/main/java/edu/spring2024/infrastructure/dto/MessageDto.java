@@ -5,6 +5,11 @@ import lombok.Data;
 @Data
 public class MessageDto {
 
-    private Long id;
     private String content;
+
+    private String senderId;
+
+    private String recipientId;
+
+    private Long chatId;
 }

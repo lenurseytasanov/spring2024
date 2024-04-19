@@ -1,13 +1,19 @@
-package edu.spring2024.infrastructure;
+package edu.spring2024.infrastructure.db.repository;
 
-import edu.spring2024.app.UserRepository;
+import edu.spring2024.app.port.UserRepository;
 import edu.spring2024.domain.User;
+import lombok.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+@Repository
 public interface JpaUserRepository extends JpaRepository<User, Long>, UserRepository {
+
+    @Override
+    @NonNull
+    User save(@NonNull User entity);
 
     Optional<User> findByUsername(String username);
 }
