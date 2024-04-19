@@ -4,6 +4,7 @@ import edu.spring2024.app.MessageService;
 import edu.spring2024.domain.Message;
 import edu.spring2024.infrastructure.dto.MessageDto;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -22,7 +23,7 @@ public class MessageController {
     private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/message")
-    public void send(@Payload MessageDto messageDto) {
+    public void send(@Valid @Payload MessageDto messageDto) {
         Message message = new Message(messageDto.getContent());
 
         try {
