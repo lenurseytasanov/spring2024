@@ -1,55 +1,58 @@
 package edu.spring2024.infrastructure.controller;
 
 import edu.spring2024.app.ChatService;
-import edu.spring2024.domain.Chat;
-import edu.spring2024.infrastructure.dto.chat.ChatDto;
-import edu.spring2024.infrastructure.dto.chat.ChatRequest;
-import jakarta.persistence.EntityNotFoundException;
+import edu.spring2024.app.dto.chat.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
 
-    private final ModelMapper modelMapper;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    @PostMapping
-    public ResponseEntity<?> createChat(@Valid @RequestBody ChatRequest chatRequest) {
-        try {
-            Chat chat = chatService.createChat(chatRequest.getUserId());
-            ChatDto chatDto = modelMapper.map(chat, ChatDto.class);
-            return ResponseEntity.ok(chatDto);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().body(e);
-        }
+    @MessageMapping("/search-chat")
+    public void searchChat(@Valid @Payload SearchChatRequest searchChatRequest) {
+
+        messagingTemplate.convertAndSend(
+                "/topic/%s".formatted(searchChatRequest.topic()),
+                searchChatRequest
+        );
     }
 
-    @DeleteMapping
-    public ResponseEntity<?> deleteChat(@Valid ChatDto chatRequest) {
-        try {
-            Chat chat = chatService.deleteChat(chatRequest.getId());
-            ChatDto response = modelMapper.map(chat, ChatDto.class);
-            return ResponseEntity.ok(response);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    @MessageMapping("/create-chat")
+    public void createChat(@Valid @Payload CreateChatRequest createChatRequest) {
+
+        ChatDto chatDto = chatService.createChat(
+                createChatRequest.userFrom(), createChatRequest.userTo(), createChatRequest.topic());
+
+        messagingTemplate.convertAndSendToUser(
+                createChatRequest.userTo(), "/queue/reply",
+                chatDto
+        );
     }
 
-    @GetMapping
-    public ResponseEntity<?> getChat(@Valid ChatDto chatRequest) {
-        try {
-            Chat chat = chatService.getChat(chatRequest.getId());
-            ChatDto response = modelMapper.map(chat, ChatDto.class);
-            return ResponseEntity.ok(response);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+
+
+    @DeleteMapping("/api/chat")
+    public ResponseEntity<?> leaveChat(@Valid LeaveChatRequest leaveChatRequest) {
+        ChatDto chatDto = chatService.leaveChat(leaveChatRequest.chatId(), leaveChatRequest.userId());
+        return ResponseEntity.ok(chatDto);
+    }
+
+
+    @GetMapping("/api/chat")
+    public ResponseEntity<?> getChat(@Valid GetChatRequest getChatRequest) {
+        ChatDto chatDto = chatService.getChat(getChatRequest.chatId());
+        return ResponseEntity.ok(chatDto);
     }
 }

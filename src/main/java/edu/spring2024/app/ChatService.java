@@ -1,15 +1,17 @@
 package edu.spring2024.app;
 
+import edu.spring2024.app.dto.chat.ChatDto;
 import edu.spring2024.app.port.ChatRepository;
 import edu.spring2024.app.port.UserRepository;
 import edu.spring2024.domain.Chat;
+import edu.spring2024.domain.ChatTopic;
 import edu.spring2024.domain.User;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * Сервис для управления чатами
@@ -23,55 +25,83 @@ public class ChatService {
 
     private final UserRepository userRepository;
 
-    /**
-     * Создает и сохраняет новый чат
-     * @param userId пользователь - создатель чата
-     * @return новый чат
-     */
-    @Transactional(propagation= Propagation.REQUIRED, noRollbackFor=Exception.class)
-    public Chat createChat(String userId) {
-        Chat chat = new Chat();
-        User user = userRepository.findById(userId).orElseThrow(EntityNotFoundException::new);
-
-        chat = chatRepository.save(chat);
-        user = userRepository.save(user);
-
-        user.getChats().add(chat);
-        chat.getUsers().add(user);
-
-        chat = chatRepository.save(chat);
-        userRepository.save(user);
-
-        log.info("chat {} created", chat.getId());
-        return chat;
+    private ChatDto convertChatToDto(Chat chat) {
+        List<String> users = chat.getUsers().stream().map(User::getId).toList();
+        return new ChatDto(chat.getId(), users, chat.getTopic());
     }
 
-    /**
-     * Удаляет чат из базы данных
-     * @param id чат
-     * @return удаленный чат
-     */
-    @Transactional(propagation=Propagation.REQUIRED, noRollbackFor=Exception.class)
-    public Chat deleteChat(Long id) {
-        Chat chat = chatRepository.findById(id).orElseThrow(EntityNotFoundException::new);
-
-        chat.getUsers().forEach(user -> {
-            user.getChats().remove(chat);
-            userRepository.save(user);
-        });
-        chatRepository.delete(chat);
-
-        log.info("chat {} deleted", chat.getId());
-        return chat;
-    }
 
     /**
-     * Получает объект чата из бд
-     * @param id чат
+     * Создает новый чат
+     * @param userId1 индентификатор участника
+     * @param userId2 индентификатор участника
+     * @param topic тема чата
      * @return чат
      */
-    @Transactional(propagation=Propagation.REQUIRED, noRollbackFor=Exception.class)
-    public Chat getChat(Long id) {
-        return chatRepository.findById(id).orElseThrow(EntityNotFoundException::new);
+    @Transactional
+    public ChatDto createChat(String userId1, String userId2, ChatTopic topic) {
+        Chat chat = Chat.builder()
+                .topic(topic)
+                .build();
+        chat = chatRepository.save(chat);
+
+        User user1 = userRepository.findById(userId1).orElseThrow();
+        User user2 = userRepository.findById(userId2).orElseThrow();
+
+        addUser(chat, user1);
+        addUser(chat, user2);
+
+        chat = chatRepository.findById(chat.getId()).orElseThrow();
+        log.debug("chat {} created", chat.getId());
+
+        return convertChatToDto(chat);
+    }
+
+    @Transactional
+    private void addUser(Chat chat, User user) {
+        chat.getUsers().add(user);
+        user.getChats().add(chat);
+
+        chatRepository.save(chat);
+        userRepository.save(user);
+        log.debug("user {} added to chat {} participants list", user.getId(), chat.getId());
+    }
+
+    /**
+     * Исключает пользователя из чата. Если список участников пуст, то удаляет чат.
+     * @param chatId идентификатор чата
+     * @param userId идентификатор пользователя
+     * @return чат
+     */
+    @Transactional
+    public ChatDto leaveChat(Long chatId, String userId) {
+        Chat chat = chatRepository.findById(chatId).orElseThrow();
+        User user = userRepository.findById(userId).orElseThrow();
+
+        user.getChats().remove(chat);
+        chat.getUsers().remove(user);
+
+        if (chat.getUsers().isEmpty()) {
+            chatRepository.delete(chat);
+            log.debug("chat {} permanently deleted", chat.getId());
+            return convertChatToDto(chat);
+        }
+
+        chatRepository.save(chat);
+        userRepository.save(user);
+        log.debug("user {} leave chat {}", userId, chatId);
+
+        return convertChatToDto(chat);
+    }
+
+    /**
+     * Возращает чат из бд
+     * @param chatId идентификатор чата
+     * @return чат
+     */
+    @Transactional
+    public ChatDto getChat(Long chatId) {
+        Chat chat = chatRepository.findById(chatId).orElseThrow();
+        return convertChatToDto(chat);
     }
 }

@@ -1,26 +1,27 @@
 package edu.spring2024.services;
 
 import edu.spring2024.app.ChatService;
+import edu.spring2024.app.dto.chat.ChatDto;
 import edu.spring2024.domain.Chat;
+import edu.spring2024.domain.ChatTopic;
 import edu.spring2024.domain.User;
 import edu.spring2024.infrastructure.db.repository.JpaChatRepository;
 import edu.spring2024.infrastructure.db.repository.JpaUserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
 @Import({ ChatService.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class ChatServiceTest {
 
     @Autowired
@@ -32,77 +33,83 @@ public class ChatServiceTest {
     @Autowired
     private JpaUserRepository jpaUserRepository;
 
-    private User user;
+    private static final String userId1 = "1";
+    private static final String userId2 = "2";
+    private static final Long chatId = 1L;
 
-    private Chat chat;
 
     @BeforeEach
+    @Transactional
     void init() {
-        user = new User("123", "user123");
-        chat = new Chat();
-        user = jpaUserRepository.save(user);
+        User user1 = new User(userId1, "user1");
+        User user2 = new User(userId2, "user2");
+
+        Chat chat = new Chat();
+
+        user1 = jpaUserRepository.save(user1);
+        jpaUserRepository.save(user2);
         chat = jpaChatRepository.save(chat);
-        user.getChats().add(chat);
-        chat.getUsers().add(user);
-        user = jpaUserRepository.save(user);
-        chat = jpaChatRepository.save(chat);
-    }
 
-
-    @Test
-    void saveTest() {
-        // Arrange
-
-        // Act
-        Chat chat = chatService.createChat(user.getId());
-        User saved = jpaUserRepository.findById(user.getId()).orElseThrow();
-
-        boolean containsUser = chat.getUsers().contains(user);
-        boolean containsChat = saved.getChats().contains(chat);
-
-        // Assert
-        assertTrue(containsUser);
-        assertTrue(containsChat);
-    }
-
-    @Test
-    void deleteTest() {
-        // Arrange
-        Long newChatId = 999L;
-
-        // Act
-        Chat deletedChat = chatService.deleteChat(chat.getId());
-        boolean containsChat = jpaUserRepository.findById(user.getId()).orElseThrow().getChats().contains(chat);
-
-        // Assert
-        assertThrows(EntityNotFoundException.class, () -> chatService.deleteChat(newChatId));
-        assertEquals(chat.getId(), deletedChat.getId());
-        assertFalse(containsChat);
+        user1.getChats().add(chat);
+        chat.getUsers().add(user1);
     }
 
     @Test
     @Transactional
-    void getUserTest() {
+    void createChatTest() {
         // Arrange
-        Long newChatId = 999L;
+        String userId = "666";
+        ChatTopic topic = ChatTopic.NO_TOPIC;
 
         // Act
-        Chat returned = chatService.getChat(chat.getId());
-        boolean containsChat = Objects.equals(
-                jpaUserRepository.findById(user.getId())
-                        .orElseThrow().getChats().stream()
-                        .findFirst().orElseThrow().getId(),
-                returned.getId()
-        );
+        ChatDto chatDto = chatService.createChat(userId1, userId2, topic);
 
-        System.out.println(returned.getId());
-        System.out.println(chat.getId());
-        System.out.println(jpaUserRepository.findById(user.getId())
-                .orElseThrow().getChats().stream()
-                .findFirst().orElseThrow().getId());
         // Assert
-        assertThrows(EntityNotFoundException.class, () -> chatService.deleteChat(newChatId));
-        assertEquals(chat.getId(), returned.getId());
-        assertTrue(containsChat);
+        assertTrue(chatDto.getUserIds().contains(userId1));
+        assertTrue(chatDto.getUserIds().contains(userId2));
+        assertEquals(topic, chatDto.getTopic());
+        assertThrows(RuntimeException.class, () -> chatService.createChat(userId1, userId, topic));
+    }
+
+    @Test
+    @Transactional
+    void leaveChatTest() {
+        // Arrange
+        String userId = "666";
+
+        // Act
+        ChatDto chatDto = chatService.leaveChat(chatId, userId1);
+
+        // Assert
+        assertThrows(RuntimeException.class, () -> chatService.leaveChat(chatId, userId));
+        assertEquals(chatId, chatDto.getChatId());
+        assertTrue(chatDto.getUserIds().isEmpty());
+    }
+
+    @Test
+    @Transactional
+    void leaveChatTestNotParticipantTest() {
+        // Arrange
+
+        // Act
+        ChatDto chatDto = chatService.leaveChat(chatId, userId2);
+
+        // Assert
+        assertEquals(chatId, chatDto.getChatId());
+        assertTrue(chatDto.getUserIds().contains(userId1));
+    }
+
+    @Test
+    @Transactional
+    void getChatTest() {
+        // Arrange
+        Long emptyChatId = 666L;
+
+        // Act
+        ChatDto chatDto = chatService.getChat(chatId);
+
+        // Assert
+        assertThrows(RuntimeException.class, () -> chatService.getChat(emptyChatId));
+        assertEquals(chatId, chatDto.getChatId());
     }
 }

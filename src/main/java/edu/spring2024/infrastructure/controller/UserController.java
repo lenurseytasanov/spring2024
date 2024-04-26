@@ -1,9 +1,10 @@
 package edu.spring2024.infrastructure.controller;
 
 import edu.spring2024.app.UserService;
-import edu.spring2024.domain.User;
-import edu.spring2024.infrastructure.dto.UserDto;
-import jakarta.persistence.EntityNotFoundException;
+import edu.spring2024.app.dto.user.CreateUserRequest;
+import edu.spring2024.app.dto.user.DeleteUserRequest;
+import edu.spring2024.app.dto.user.GetUserRequest;
+import edu.spring2024.app.dto.user.UserDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -17,29 +18,20 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> addUser(@Valid @RequestBody UserDto userDto){
-        User user = new User(userDto.getId(), userDto.getUsername());
-        userService.save(user);
-        return ResponseEntity.ok("User added successfully");
+    public ResponseEntity<?> addUser(@Valid @RequestBody CreateUserRequest createUserRequest){
+        UserDto userDto = userService.createUser(createUserRequest.userId(), createUserRequest.username());
+        return ResponseEntity.ok(userDto);
     }
 
     @DeleteMapping
-    public ResponseEntity<?> deleteUser(@Valid @RequestBody UserDto userDto){
-        try {
-            User user = userService.deleteUser(userDto.getId());
-            return ResponseEntity.ok(user);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> deleteUser(@Valid @RequestBody DeleteUserRequest deleteUserRequest){
+        UserDto userDto = userService.deleteUser(deleteUserRequest.userId());
+        return ResponseEntity.ok(userDto);
     }
 
     @GetMapping
-    public ResponseEntity<?> getUser(@Valid @RequestBody UserDto userDto){
-        try {
-            User user = userService.getUser(userDto.getId());
-            return ResponseEntity.ok(user);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<?> getUser(@Valid @RequestBody GetUserRequest getUserRequest){
+        UserDto userDto = userService.getUser(getUserRequest.userId());
+        return ResponseEntity.ok(userDto);
     }
 }

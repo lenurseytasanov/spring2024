@@ -1,85 +1,96 @@
 package edu.spring2024.services;
 
 import edu.spring2024.app.UserService;
+import edu.spring2024.app.dto.user.UserDto;
+import edu.spring2024.domain.Chat;
 import edu.spring2024.domain.User;
+import edu.spring2024.infrastructure.db.repository.JpaChatRepository;
 import edu.spring2024.infrastructure.db.repository.JpaUserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 @ActiveProfiles("test")
 @Import({ UserService.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class UserServiceTest {
 
     @Autowired
     private UserService userService;
 
     @Autowired
+    private JpaChatRepository jpaChatRepository;
+
+    @Autowired
     private JpaUserRepository jpaUserRepository;
+
+    private static final String userId1 = "1";
+    private static final String userId2 = "2";
+    private static final Long chatId = 1L;
+
 
     @BeforeEach
     void init() {
-        jpaUserRepository.save(new User("123", "user123"));
-        jpaUserRepository.save(new User("456", "user456"));
-        jpaUserRepository.findById("");
+        User user1 = new User(userId1, "user1");
+        User user2 = new User(userId2, "user2");
+
+        Chat chat = Chat.builder()
+                .id(chatId)
+                .build();
+
+        user1 = jpaUserRepository.save(user1);
+        jpaUserRepository.save(user2);
+        chat = jpaChatRepository.save(chat);
+
+        user1.getChats().add(chat);
+        chat.getUsers().add(user1);
     }
 
 
     @Test
-    void userSavingTest() {
+    void createUserTest() {
         // Arrange
-        User user1 = new User("test", "test");
-        User user2 = new User("123", "new_username");
+        String userId = "3";
+        String username = "username";
 
         // Act
-        User returnedUser1 = userService.save(user1);
-        User returnedUser2 = userService.save(user2);
-        User savedUser1 = jpaUserRepository.findById(returnedUser1.getId()).orElseThrow();
-        User savedUser2 = jpaUserRepository.findById(returnedUser2.getId()).orElseThrow();
+        UserDto userDto = userService.createUser(userId, username);
 
         // Assert
-        assertEquals(returnedUser1.getUsername(), savedUser1.getUsername());
-        assertEquals(returnedUser2.getUsername(), savedUser2.getUsername());
+        assertEquals(userId, userDto.getUserId());
+        assertEquals(username, userDto.getUsername());
+        assertThrows(RuntimeException.class, () -> userService.createUser(userId1, username));
     }
 
     @Test
-    void deleteTest() {
+    void deleteUserTest() {
         // Arrange
-        String userId1 = "123";
-        String userId2 = "not_existing_id";
-
+        String userId = "3";
         // Act
-        User returnedUser1 = userService.deleteUser(userId1);
-        boolean isDeleted1 = jpaUserRepository.findById(returnedUser1.getId()).isEmpty();
+        UserDto userDto = userService.deleteUser(userId1);
 
         // Assert
-        assertThrows(EntityNotFoundException.class, () -> userService.deleteUser(userId2));
-        assertEquals(returnedUser1.getId(), userId1);
-        assertTrue(isDeleted1);
+        assertEquals(userId1, userDto.getUserId());
+        assertThrows(RuntimeException.class, () -> userService.deleteUser(userId));
     }
 
     @Test
     void getUserTest() {
         // Arrange
-        String userId1 = "123";
-        String userId2 = "not_existing_id";
-
+        String userId = "3";
         // Act
-        User returnedUser1 = userService.getUser(userId1);
-        boolean isPresent1 = jpaUserRepository.findById(returnedUser1.getId()).isPresent();
-        boolean isPresent2 = jpaUserRepository.findById(userId2).isPresent();
+        UserDto userDto = userService.getUser(userId1);
 
         // Assert
-        assertThrows(EntityNotFoundException.class, () -> userService.getUser(userId2));
-        assertEquals(returnedUser1.getId(), userId1);
-        assertTrue(isPresent1);
-        assertFalse(isPresent2);
+        assertEquals(userId1, userDto.getUserId());
+        assertThrows(RuntimeException.class, () -> userService.getUser(userId));
     }
 }

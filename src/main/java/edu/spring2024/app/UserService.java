@@ -1,11 +1,12 @@
 package edu.spring2024.app;
 
+import edu.spring2024.app.dto.user.UserDto;
 import edu.spring2024.app.port.ChatRepository;
 import edu.spring2024.app.port.UserRepository;
 import edu.spring2024.domain.User;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,44 +22,59 @@ public class UserService {
 
     private final ChatRepository chatRepository;
 
+    private final ModelMapper modelMapper;
+
+    private UserDto convertUserToDto(User user) {
+        return modelMapper.map(user, UserDto.class);
+    }
+
     /**
-     * Сохраняет пользователя в базу данных
-     * @param user новый пользователь
-     * @return сохраненный пользователь
+     * Создает нового пользователя
+     * @param userId индентификатор пользователя
+     * @param username имя пользователя
+     * @return пользователь
      */
     @Transactional
-    public User save(User user) {
-        User saved = userRepository.save(user);
-        log.info("user {} saved", saved.getId());
-        return saved;
+    public UserDto createUser(String userId, String username) {
+        if (userRepository.findById(userId).isPresent()) {
+            log.debug("user {} already saved", userId);
+            throw new IllegalArgumentException();
+        }
+
+        User user = new User(userId, username);
+        user = userRepository.save(user);
+        log.info("user {} saved", userId);
+        return convertUserToDto(user);
     }
 
     /**
      * Удаляет пользователя из бд
-     * @param id пользователь
+     * @param userId индентификатор пользователя
      * @return удаленный пользователь
      */
     @Transactional
-    public User deleteUser(String id) {
-        User user = userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
+    public UserDto deleteUser(String userId) {
+        User user = userRepository.findById(userId).orElseThrow();
 
         user.getChats().forEach(chat -> {
             chat.getUsers().remove(user);
             chatRepository.save(chat);
         });
+
         userRepository.delete(user);
 
         log.info("user {} deleted", user.getId());
-        return user;
+        return convertUserToDto(user);
     }
 
     /**
-     * Получает пользователя из бд
-     * @param id пользователь
+     * Возварщает пользователя из бд
+     * @param userId индентификатор пользователя
      * @return пользователь
      */
     @Transactional
-    public User getUser(String id) {
-        return userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
+    public UserDto getUser(String userId) {
+        User user = userRepository.findById(userId).orElseThrow();
+        return convertUserToDto(user);
     }
 }

@@ -1,5 +1,6 @@
 package edu.spring2024.app;
 
+import edu.spring2024.app.dto.message.MessageDto;
 import edu.spring2024.app.port.ChatRepository;
 import edu.spring2024.app.port.MessageRepository;
 import edu.spring2024.app.port.UserRepository;
@@ -10,7 +11,6 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -29,14 +29,16 @@ public class MessageService {
 
     /**
      * Сохраняет сообщение в базу данных
-     * @param message сообщение
      * @param chatId чат, которому принадлежит сообщение
      * @param senderId отправитель
      * @param recipientId получатель
+     * @param content текст сообщения
      * @return сохраненное сообщение
      */
-    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor=Exception.class)
-    public Message save(Message message, Long chatId, String senderId, String recipientId) {
+    @Transactional
+    public MessageDto save(Long chatId, String senderId, String recipientId, String content) {
+        Message message = new Message(content);
+
         User sender = userRepository.findById(senderId).orElseThrow(EntityNotFoundException::new);
         User recipient = userRepository.findById(recipientId).orElseThrow(EntityNotFoundException::new);
         Chat chat = chatRepository.findById(chatId).orElseThrow(EntityNotFoundException::new);
@@ -56,6 +58,6 @@ public class MessageService {
         chatRepository.save(chat);
 
         log.info("message {} saved", saved.getId());
-        return saved;
+        return new MessageDto(content, senderId, recipientId, chatId);
     }
 }

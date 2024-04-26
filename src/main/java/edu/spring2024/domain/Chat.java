@@ -1,6 +1,8 @@
 package edu.spring2024.domain;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +13,10 @@ import java.util.Set;
  * Объект представляет комнату для обмена сообщениями между заданными пользователями.
  */
 @Entity
-@Getter @NoArgsConstructor
+@Getter
+@NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class Chat {
 
     /**
@@ -38,4 +43,10 @@ public class Chat {
      */
     @OneToMany(mappedBy = "chat")
     private final Set<Message> messages = new HashSet<>();
+
+    /**
+     * Тема обсуждения для чата
+     */
+    @Enumerated(EnumType.STRING)
+    private ChatTopic topic;
 }

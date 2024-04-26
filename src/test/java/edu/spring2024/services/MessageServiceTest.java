@@ -1,24 +1,26 @@
 package edu.spring2024.services;
 
 import edu.spring2024.app.MessageService;
+import edu.spring2024.app.dto.message.MessageDto;
 import edu.spring2024.domain.Chat;
-import edu.spring2024.domain.Message;
 import edu.spring2024.domain.User;
 import edu.spring2024.infrastructure.db.repository.JpaChatRepository;
-import edu.spring2024.infrastructure.db.repository.JpaMessageRepository;
 import edu.spring2024.infrastructure.db.repository.JpaUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 @ActiveProfiles("test")
 @Import({ MessageService.class })
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class MessageServiceTest {
 
     @Autowired
@@ -30,51 +32,46 @@ public class MessageServiceTest {
     @Autowired
     private JpaUserRepository jpaUserRepository;
 
-    @Autowired
-    private JpaMessageRepository jpaMessageRepository;
+    private static final String userId1 = "1";
+    private static final String userId2 = "2";
+    private static final Long chatId = 1L;
 
-    private User user;
-
-    private Chat chat;
-
-    private Message message;
 
     @BeforeEach
     void init() {
-        user = new User("123", "user123");
-        chat = new Chat();
-        message = new Message("content");
-        user = jpaUserRepository.save(user);
+        User user1 = new User(userId1, "user1");
+        User user2 = new User(userId2, "user2");
+
+        Chat chat = Chat.builder()
+                .id(chatId)
+                .build();
+
+        user1 = jpaUserRepository.save(user1);
+        jpaUserRepository.save(user2);
         chat = jpaChatRepository.save(chat);
-        message = jpaMessageRepository.save(message);
-        user.getChats().add(chat);
-        chat.getUsers().add(user);
-        message.setChat(chat);
-        message.setRecipient(user);
-        message.setSender(user);
-        user = jpaUserRepository.save(user);
-        chat = jpaChatRepository.save(chat);
-        message = jpaMessageRepository.save(message);
+
+        user1.getChats().add(chat);
+        chat.getUsers().add(user1);
     }
 
 
     @Test
     void saveTest() {
         // Arrange
-        Message newMessage = new Message("content2");
+        String text = "content";
+        Long emptyChatId = 666L;
+        String emptyUserId = "666";
 
         // Act
-        newMessage = messageService.save(newMessage, chat.getId(), user.getId(), user.getId());
-        User savedUser = jpaUserRepository.findById(user.getId()).orElseThrow();
-        Chat savedChat = jpaChatRepository.findById(chat.getId()).orElseThrow();
-
-        boolean containsSender = savedUser.getSent().contains(newMessage);
-        boolean containsRecipient = savedUser.getReceived().contains(newMessage);
-        boolean containsChat = savedChat.getMessages().contains(newMessage);
+        MessageDto messageDto = messageService.save(chatId, userId1, userId2, text);
 
         // Assert
-        assertTrue(containsChat);
-        assertTrue(containsRecipient);
-        assertTrue(containsSender);
+        assertEquals(text, messageDto.content());
+        assertEquals(chatId, messageDto.chatId());
+        assertEquals(userId1, messageDto.senderId());
+        assertEquals(userId2, messageDto.recipientId());
+
+        assertThrows(RuntimeException.class, () -> messageService.save(emptyChatId, userId1, userId2, text));
+        assertThrows(RuntimeException.class, () -> messageService.save(chatId, userId1, emptyUserId, text));
     }
 }
