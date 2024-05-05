@@ -1,17 +1,21 @@
 package edu.spring2024.app;
 
 import edu.spring2024.app.dto.message.MessageDto;
+import edu.spring2024.app.exception.ChatNotFoundException;
+import edu.spring2024.app.exception.MessageNotFoundException;
+import edu.spring2024.app.exception.UserNotFoundException;
 import edu.spring2024.app.port.ChatRepository;
 import edu.spring2024.app.port.MessageRepository;
 import edu.spring2024.app.port.UserRepository;
 import edu.spring2024.domain.Chat;
 import edu.spring2024.domain.Message;
 import edu.spring2024.domain.User;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * Сервис для управления сообщениями
@@ -37,27 +41,57 @@ public class MessageService {
      */
     @Transactional
     public MessageDto save(Long chatId, String senderId, String recipientId, String content) {
-        Message message = new Message(content);
 
-        User sender = userRepository.findById(senderId).orElseThrow(EntityNotFoundException::new);
-        User recipient = userRepository.findById(recipientId).orElseThrow(EntityNotFoundException::new);
-        Chat chat = chatRepository.findById(chatId).orElseThrow(EntityNotFoundException::new);
+        User sender = userRepository.findById(senderId).orElseThrow(UserNotFoundException::new);
+        User recipient = userRepository.findById(recipientId).orElseThrow(UserNotFoundException::new);
+        Chat chat = chatRepository.findById(chatId).orElseThrow(ChatNotFoundException::new);
 
-        Message saved = messageRepository.save(message);
-        sender.getSent().add(saved);
-        recipient.getReceived().add(saved);
-        chat.getMessages().add(saved);
+        Message message = Message.builder()
+                .chat(chat)
+                .recipient(recipient)
+                .sender(sender)
+                .content(content)
+                .build();
 
-        saved.setSender(sender);
-        saved.setRecipient(recipient);
-        saved.setChat(chat);
+        message = messageRepository.save(message);
 
-        saved = messageRepository.save(saved);
-        userRepository.save(sender);
-        userRepository.save(recipient);
-        chatRepository.save(chat);
+        sender.getSent().add(message);
+        recipient.getReceived().add(message);
+        chat.getMessages().add(message);
 
-        log.info("message {} saved", saved.getId());
-        return new MessageDto(content, senderId, recipientId, chatId);
+        log.info("message {} saved", message.getId());
+        return new MessageDto(message.getId(), content, senderId, recipientId, chatId);
+    }
+
+    /**
+     * Возвращает список сообщений
+     * @param chatId чат
+     * @return сообщения
+     */
+    @Transactional
+    public List<MessageDto> findAll(Long chatId) {
+        if (chatId == null) {
+            return messageRepository.findAll().stream()
+                    .map(message -> new MessageDto(message.getId(), message.getContent(), message.getSender().getId(),
+                            message.getRecipient().getId(), message.getChat().getId()))
+                    .toList();
+        }
+
+        return messageRepository.findAllByChatId(chatId).stream()
+                .map(message -> new MessageDto(message.getId(), message.getContent(), message.getSender().getId(),
+                        message.getRecipient().getId(), message.getChat().getId()))
+                .toList();
+    }
+
+    /**
+     * Возвращает сообщение по id
+     * @param id id сообщения
+     * @return сообщение
+     */
+    @Transactional
+    public MessageDto findById(Long id) {
+        Message message = messageRepository.findById(id).orElseThrow(MessageNotFoundException::new);
+        return new MessageDto(message.getId(), message.getContent(), message.getSender().getId(),
+                message.getRecipient().getId(), message.getChat().getId());
     }
 }

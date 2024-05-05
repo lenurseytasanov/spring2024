@@ -1,22 +1,18 @@
 package edu.spring2024.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
  * Объект представляет комнату для обмена сообщениями между заданными пользователями.
  */
 @Entity
-@Getter
+@Getter @Builder
 @NoArgsConstructor
-@Builder
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Chat {
 
     /**
@@ -36,13 +32,13 @@ public class Chat {
             joinColumns = @JoinColumn(name = "chat_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private final Set<User> users = new HashSet<>();
+    private final Set<User> users = new LinkedHashSet<>();
 
     /**
      * Сообщения, отправленные в этот чат.
      */
     @OneToMany(mappedBy = "chat")
-    private final Set<Message> messages = new HashSet<>();
+    private final Set<Message> messages = new LinkedHashSet<>();
 
     /**
      * Тема обсуждения для чата

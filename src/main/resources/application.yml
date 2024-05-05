@@ -1,32 +1,68 @@
 spring:
   profiles:
-    active: development
+    active: local-dev
+
+logging:
+  level:
+    org.hibernate: error
+    org.springframework.web: trace
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
 
 ---
 
-logging.level.org.springframework.web: trace
+server:
+  port: 8090
+
 spring:
   config:
     activate:
-      on-profile: development
+      on-profile: local-dev
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8282/realms/test
-          jwk-set-uri: http://localhost:8282/realms/test/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8081/realms/develop
+          jwk-set-uri: http://localhost:8081/realms/develop/protocol/openid-connect/certs
   datasource:
-    url: jdbc:h2:mem:testdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: ${RESOURCE_POSTGRES_USER}
+    password: ${RESOURCE_POSTGRES_PASSWORD}
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-  h2:
-    console:
-      enabled: true
+    database: postgresql
+    hibernate:
+      ddl-auto: update
+  output:
+    ansi:
+      enabled: ALWAYS
+
+---
+
 server:
   port: 8080
+
+spring:
+  config:
+    activate:
+      on-profile: deploy
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/develop
+          jwk-set-uri: http://keycloak:8080/realms/develop/protocol/openid-connect/certs
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://resource_db_postgres:5432/postgres
+    username: ${RESOURCE_POSTGRES_USER}
+    password: ${RESOURCE_POSTGRES_PASSWORD}
+  jpa:
+    database: postgresql
+    hibernate:
+      ddl-auto: update
 
 ---
 
@@ -37,12 +73,12 @@ spring:
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    username: ${H2_TEST_USER}
+    password: ${H2_TEST_PASSWORD}
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
   h2:
     console:
       enabled: false
 server:
-  port: 8090
+  port: 8100

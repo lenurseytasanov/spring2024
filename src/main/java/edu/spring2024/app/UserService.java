@@ -1,7 +1,8 @@
 package edu.spring2024.app;
 
 import edu.spring2024.app.dto.user.UserDto;
-import edu.spring2024.app.port.ChatRepository;
+import edu.spring2024.app.exception.UserNotFoundException;
+import edu.spring2024.app.exception.UserNotUniqueException;
 import edu.spring2024.app.port.UserRepository;
 import edu.spring2024.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * Сервис для управления пользователями
@@ -19,8 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final UserRepository userRepository;
-
-    private final ChatRepository chatRepository;
 
     private final ModelMapper modelMapper;
 
@@ -36,12 +37,16 @@ public class UserService {
      */
     @Transactional
     public UserDto createUser(String userId, String username) {
-        if (userRepository.findById(userId).isPresent()) {
-            log.debug("user {} already saved", userId);
-            throw new IllegalArgumentException();
-        }
 
-        User user = new User(userId, username);
+        userRepository.findById(userId).ifPresent(user -> {
+            throw new UserNotUniqueException();
+        });
+
+        User user = User.builder()
+                .id(userId)
+                .username(username)
+                .build();
+
         user = userRepository.save(user);
         log.info("user {} saved", userId);
         return convertUserToDto(user);
@@ -54,12 +59,9 @@ public class UserService {
      */
     @Transactional
     public UserDto deleteUser(String userId) {
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
-        user.getChats().forEach(chat -> {
-            chat.getUsers().remove(user);
-            chatRepository.save(chat);
-        });
+        user.getChats().forEach(chat -> chat.getUsers().remove(user));
 
         userRepository.delete(user);
 
@@ -73,8 +75,26 @@ public class UserService {
      * @return пользователь
      */
     @Transactional
-    public UserDto getUser(String userId) {
-        User user = userRepository.findById(userId).orElseThrow();
+    public UserDto findBy(String userId) {
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
         return convertUserToDto(user);
+    }
+
+    /**
+     * Возвращает список пользователей
+     * @param chatId чат
+     * @return участники чата
+     */
+    @Transactional
+    public List<UserDto> findAll(Long chatId) {
+        if (chatId == null) {
+            return userRepository.findAll().stream()
+                    .map(this::convertUserToDto)
+                    .toList();
+        }
+
+        return userRepository.findAllByChatsId(chatId).stream()
+                .map(this::convertUserToDto)
+                .toList();
     }
 }

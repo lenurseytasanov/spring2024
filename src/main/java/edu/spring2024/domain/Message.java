@@ -7,8 +7,9 @@ import lombok.*;
  * Класс представляет сообщение в чате
  */
 @Entity
-@Getter @NoArgsConstructor
-@RequiredArgsConstructor
+@Getter @Builder
+@NoArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Message {
 
     /**
@@ -23,7 +24,6 @@ public class Message {
      */
     @ManyToOne
     @JoinColumn(name = "sender_id")
-    @Setter
     private User sender;
 
     /**
@@ -31,7 +31,6 @@ public class Message {
      */
     @ManyToOne
     @JoinColumn(name = "recipient_id")
-    @Setter
     private User recipient;
 
     /**
@@ -39,12 +38,10 @@ public class Message {
      */
     @ManyToOne
     @JoinColumn(name = "chat_id")
-    @Setter
     private Chat chat;
 
     /**
      * текст сообщения
      */
-    @NonNull
     private String content;
 }

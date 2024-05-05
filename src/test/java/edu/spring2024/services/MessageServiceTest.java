@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -38,13 +39,18 @@ public class MessageServiceTest {
 
 
     @BeforeEach
+    @Transactional
     void init() {
-        User user1 = new User(userId1, "user1");
-        User user2 = new User(userId2, "user2");
-
-        Chat chat = Chat.builder()
-                .id(chatId)
+        User user1 = User.builder()
+                .id(userId1)
+                .username("user1")
                 .build();
+        User user2 = User.builder()
+                .id(userId2)
+                .username("user2")
+                .build();
+
+        Chat chat = new Chat();
 
         user1 = jpaUserRepository.save(user1);
         jpaUserRepository.save(user2);
@@ -56,6 +62,7 @@ public class MessageServiceTest {
 
 
     @Test
+    @Transactional
     void saveTest() {
         // Arrange
         String text = "content";
@@ -73,5 +80,23 @@ public class MessageServiceTest {
 
         assertThrows(RuntimeException.class, () -> messageService.save(emptyChatId, userId1, userId2, text));
         assertThrows(RuntimeException.class, () -> messageService.save(chatId, userId1, emptyUserId, text));
+    }
+
+    @Test
+    @Transactional
+    void getMessageTest() {
+        Long emptyMessageId = 666L;
+
+        assertThrows(RuntimeException.class, () -> messageService.findById(emptyMessageId));
+    }
+
+    @Test
+    @Transactional
+    void gatAllMessagesTest() {
+        Long emptyChatId = 666L;
+
+        assertEquals(0, messageService.findAll(emptyChatId).size());
+        assertEquals(0, messageService.findAll(chatId).size());
+        assertEquals(0, messageService.findAll(null).size());
     }
 }

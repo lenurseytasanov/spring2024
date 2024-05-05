@@ -41,8 +41,14 @@ public class ChatServiceTest {
     @BeforeEach
     @Transactional
     void init() {
-        User user1 = new User(userId1, "user1");
-        User user2 = new User(userId2, "user2");
+        User user1 = User.builder()
+                .id(userId1)
+                .username("user1")
+                .build();
+        User user2 = User.builder()
+                .id(userId2)
+                .username("user2")
+                .build();
 
         Chat chat = new Chat();
 
@@ -106,10 +112,19 @@ public class ChatServiceTest {
         Long emptyChatId = 666L;
 
         // Act
-        ChatDto chatDto = chatService.getChat(chatId);
+        ChatDto chatDto = chatService.findById(chatId);
 
         // Assert
-        assertThrows(RuntimeException.class, () -> chatService.getChat(emptyChatId));
+        assertThrows(RuntimeException.class, () -> chatService.findById(emptyChatId));
         assertEquals(chatId, chatDto.getChatId());
+    }
+
+    @Test
+    @Transactional
+    void gatAllChatsTest() {
+        String emptyUserId = "-1";
+        assertEquals(0, chatService.findAll(emptyUserId).size());
+        assertEquals(chatId, chatService.findAll(null).getFirst().getChatId());
+        assertEquals(chatId, chatService.findAll(userId1).getFirst().getChatId());
     }
 }

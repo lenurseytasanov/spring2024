@@ -13,6 +13,9 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -38,13 +41,18 @@ public class UserServiceTest {
 
 
     @BeforeEach
+    @Transactional
     void init() {
-        User user1 = new User(userId1, "user1");
-        User user2 = new User(userId2, "user2");
-
-        Chat chat = Chat.builder()
-                .id(chatId)
+        User user1 = User.builder()
+                .id(userId1)
+                .username("user1")
                 .build();
+        User user2 = User.builder()
+                .id(userId2)
+                .username("user2")
+                .build();
+
+        Chat chat = new Chat();
 
         user1 = jpaUserRepository.save(user1);
         jpaUserRepository.save(user2);
@@ -56,6 +64,7 @@ public class UserServiceTest {
 
 
     @Test
+    @Transactional
     void createUserTest() {
         // Arrange
         String userId = "3";
@@ -71,6 +80,7 @@ public class UserServiceTest {
     }
 
     @Test
+    @Transactional
     void deleteUserTest() {
         // Arrange
         String userId = "3";
@@ -83,14 +93,26 @@ public class UserServiceTest {
     }
 
     @Test
+    @Transactional
     void getUserTest() {
         // Arrange
         String userId = "3";
         // Act
-        UserDto userDto = userService.getUser(userId1);
+        UserDto userDto = userService.findBy(userId1);
 
         // Assert
         assertEquals(userId1, userDto.getUserId());
-        assertThrows(RuntimeException.class, () -> userService.getUser(userId));
+        assertThrows(RuntimeException.class, () -> userService.findBy(userId));
+    }
+
+    @Test
+    @Transactional
+    void gatAllUsersTest() {
+        Long emptyChatId = 666L;
+        List<String> expected = List.of(userId1, userId2);
+
+        assertEquals(0, userService.findAll(emptyChatId).size());
+        assertEquals(expected, userService.findAll(null).stream().map(UserDto::getUserId).toList());
+        assertEquals(expected, userService.findAll(null).stream().map(UserDto::getUserId).toList());
     }
 }
