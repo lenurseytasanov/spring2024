@@ -1,6 +1,5 @@
 package edu.spring2024.app;
 
-import edu.spring2024.app.dto.chat.ChatDto;
 import edu.spring2024.app.exception.ChatNotFoundException;
 import edu.spring2024.app.exception.UserNotFoundException;
 import edu.spring2024.app.port.ChatRepository;
@@ -27,11 +26,6 @@ public class ChatService {
 
     private final UserRepository userRepository;
 
-    private ChatDto convertChatToDto(Chat chat) {
-        List<String> users = chat.getUsers().stream().map(User::getId).toList();
-        return new ChatDto(chat.getId(), users, chat.getTopic());
-    }
-
     /**
      * Создает новый чат
      * @param userId1 индентификатор участника
@@ -40,29 +34,29 @@ public class ChatService {
      * @return чат
      */
     @Transactional
-    public ChatDto createChat(String userId1, String userId2, ChatTopic topic) {
+    public Chat createChat(String userId1, String userId2, ChatTopic topic) {
         Chat chat = Chat.builder()
                 .topic(topic)
                 .build();
+
+        User user1 = addUser(chat, userId1);
+        User user2 = addUser(chat, userId2);
+
         chat = chatRepository.save(chat);
-
-        User user1 = userRepository.findById(userId1).orElseThrow(UserNotFoundException::new);
-        User user2 = userRepository.findById(userId2).orElseThrow(UserNotFoundException::new);
-
-        addUser(chat, user1);
-        addUser(chat, user2);
-
+        userRepository.save(user1);
+        userRepository.save(user2);
         log.debug("chat {} created", chat.getId());
 
-        return convertChatToDto(chat);
+        return chat;
     }
 
-    @Transactional
-    private void addUser(Chat chat, User user) {
+    private User addUser(Chat chat, String userId) {
+        User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
         chat.getUsers().add(user);
         user.getChats().add(chat);
 
         log.debug("user {} added to chat {} participants list", user.getId(), chat.getId());
+        return user;
     }
 
     /**
@@ -72,7 +66,7 @@ public class ChatService {
      * @return чат
      */
     @Transactional
-    public ChatDto leaveChat(Long chatId, String userId) {
+    public Chat leaveChat(Long chatId, String userId) {
         Chat chat = chatRepository.findById(chatId).orElseThrow(ChatNotFoundException::new);
         User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
@@ -82,12 +76,15 @@ public class ChatService {
         if (chat.getUsers().isEmpty()) {
             chatRepository.delete(chat);
             log.debug("chat {} permanently deleted", chat.getId());
-            return convertChatToDto(chat);
+            return chat;
         }
+
+        userRepository.save(user);
+        chatRepository.save(chat);
 
         log.debug("user {} leave chat {}", userId, chatId);
 
-        return convertChatToDto(chat);
+        return chat;
     }
 
     /**
@@ -96,9 +93,8 @@ public class ChatService {
      * @return чат
      */
     @Transactional
-    public ChatDto findById(Long chatId) {
-        Chat chat = chatRepository.findById(chatId).orElseThrow(ChatNotFoundException::new);
-        return convertChatToDto(chat);
+    public Chat findById(Long chatId) {
+        return chatRepository.findById(chatId).orElseThrow(ChatNotFoundException::new);
     }
 
     /**
@@ -107,15 +103,11 @@ public class ChatService {
      * @return чаты
      */
     @Transactional
-    public List<ChatDto> findAll(String userId) {
+    public List<Chat> findAll(String userId) {
         if (userId == null) {
-            return chatRepository.findAll().stream()
-                    .map(this::convertChatToDto)
-                    .toList();
+            return chatRepository.findAll();
         }
 
-        return chatRepository.findAllByUsersId(userId).stream()
-                .map(this::convertChatToDto)
-                .toList();
+        return chatRepository.findAllByUsersId(userId);
     }
 }

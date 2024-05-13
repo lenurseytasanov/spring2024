@@ -1,18 +1,29 @@
 package edu.spring2024.services;
 
+import edu.spring2024.Spring2024Application;
 import edu.spring2024.app.MessageService;
-import edu.spring2024.app.dto.message.MessageDto;
 import edu.spring2024.domain.Chat;
+import edu.spring2024.domain.ChatTopic;
+import edu.spring2024.domain.Message;
 import edu.spring2024.domain.User;
+import edu.spring2024.infrastructure.assembler.mapper.entity.ChatMapper;
+import edu.spring2024.infrastructure.assembler.mapper.entity.MessageMapper;
+import edu.spring2024.infrastructure.assembler.mapper.entity.UserMapper;
+import edu.spring2024.infrastructure.configuration.ApplicationConfig;
+import edu.spring2024.infrastructure.db.adapter.ChatAdapter;
+import edu.spring2024.infrastructure.db.adapter.MessageAdapter;
+import edu.spring2024.infrastructure.db.adapter.UserAdapter;
 import edu.spring2024.infrastructure.db.repository.JpaChatRepository;
 import edu.spring2024.infrastructure.db.repository.JpaUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,8 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({ MessageService.class })
+@Import({ MessageService.class, ModelMapper.class, MessageMapper.class, UserMapper.class, ChatMapper.class,
+        MessageAdapter.class, UserAdapter.class, ChatAdapter.class})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@ContextConfiguration(classes = {Spring2024Application.class, ApplicationConfig.class})
 public class MessageServiceTest {
 
     @Autowired
@@ -32,6 +45,12 @@ public class MessageServiceTest {
 
     @Autowired
     private JpaUserRepository jpaUserRepository;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private ChatMapper chatMapper;
 
     private static final String userId1 = "1";
     private static final String userId2 = "2";
@@ -50,14 +69,16 @@ public class MessageServiceTest {
                 .username("user2")
                 .build();
 
-        Chat chat = new Chat();
-
-        user1 = jpaUserRepository.save(user1);
-        jpaUserRepository.save(user2);
-        chat = jpaChatRepository.save(chat);
+        Chat chat = Chat.builder()
+                .topic(ChatTopic.NO_TOPIC)
+                .build();
 
         user1.getChats().add(chat);
         chat.getUsers().add(user1);
+
+        jpaUserRepository.save(userMapper.toEntity(user1));
+        jpaUserRepository.save(userMapper.toEntity(user2));
+        jpaChatRepository.save(chatMapper.toEntity(chat));
     }
 
 
@@ -70,13 +91,13 @@ public class MessageServiceTest {
         String emptyUserId = "666";
 
         // Act
-        MessageDto messageDto = messageService.save(chatId, userId1, userId2, text);
+        Message message = messageService.save(chatId, userId1, userId2, text);
 
         // Assert
-        assertEquals(text, messageDto.content());
-        assertEquals(chatId, messageDto.chatId());
-        assertEquals(userId1, messageDto.senderId());
-        assertEquals(userId2, messageDto.recipientId());
+        assertEquals(text, message.getContent());
+        assertEquals(chatId, message.getId());
+        assertEquals(userId1, message.getSender().getId());
+        assertEquals(userId2, message.getRecipient().getId());
 
         assertThrows(RuntimeException.class, () -> messageService.save(emptyChatId, userId1, userId2, text));
         assertThrows(RuntimeException.class, () -> messageService.save(chatId, userId1, emptyUserId, text));

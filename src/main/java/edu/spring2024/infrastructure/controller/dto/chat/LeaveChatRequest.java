@@ -1,4 +1,4 @@
-package edu.spring2024.app.dto.chat;
+package edu.spring2024.infrastructure.controller.dto.chat;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface ChatRepository {
 
-    <S extends Chat> S save(S chat);
+    Chat save(Chat chat);
 
     void delete(Chat chat);
 

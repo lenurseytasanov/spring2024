@@ -7,9 +7,9 @@ import java.util.Optional;
 
 public interface MessageRepository {
 
-    <S extends Message> S save(S entity);
+    Message save(Message message);
 
-    Optional<Message> findById(Long aLong);
+    Optional<Message> findById(Long id);
 
     List<Message> findAllByChatId(Long chatId);
 

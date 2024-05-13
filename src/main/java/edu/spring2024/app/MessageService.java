@@ -1,6 +1,5 @@
 package edu.spring2024.app;
 
-import edu.spring2024.app.dto.message.MessageDto;
 import edu.spring2024.app.exception.ChatNotFoundException;
 import edu.spring2024.app.exception.MessageNotFoundException;
 import edu.spring2024.app.exception.UserNotFoundException;
@@ -40,7 +39,7 @@ public class MessageService {
      * @return сохраненное сообщение
      */
     @Transactional
-    public MessageDto save(Long chatId, String senderId, String recipientId, String content) {
+    public Message save(Long chatId, String senderId, String recipientId, String content) {
 
         User sender = userRepository.findById(senderId).orElseThrow(UserNotFoundException::new);
         User recipient = userRepository.findById(recipientId).orElseThrow(UserNotFoundException::new);
@@ -53,14 +52,17 @@ public class MessageService {
                 .content(content)
                 .build();
 
-        message = messageRepository.save(message);
-
+        chat.getMessages().add(message);
         sender.getSent().add(message);
         recipient.getReceived().add(message);
-        chat.getMessages().add(message);
+
+        message = messageRepository.save(message);
+        chatRepository.save(chat);
+        userRepository.save(sender);
+        userRepository.save(recipient);
 
         log.info("message {} saved", message.getId());
-        return new MessageDto(message.getId(), content, senderId, recipientId, chatId);
+        return message;
     }
 
     /**
@@ -69,18 +71,12 @@ public class MessageService {
      * @return сообщения
      */
     @Transactional
-    public List<MessageDto> findAll(Long chatId) {
+    public List<Message> findAll(Long chatId) {
         if (chatId == null) {
-            return messageRepository.findAll().stream()
-                    .map(message -> new MessageDto(message.getId(), message.getContent(), message.getSender().getId(),
-                            message.getRecipient().getId(), message.getChat().getId()))
-                    .toList();
+            return messageRepository.findAll();
         }
 
-        return messageRepository.findAllByChatId(chatId).stream()
-                .map(message -> new MessageDto(message.getId(), message.getContent(), message.getSender().getId(),
-                        message.getRecipient().getId(), message.getChat().getId()))
-                .toList();
+        return messageRepository.findAllByChatId(chatId);
     }
 
     /**
@@ -89,9 +85,7 @@ public class MessageService {
      * @return сообщение
      */
     @Transactional
-    public MessageDto findById(Long id) {
-        Message message = messageRepository.findById(id).orElseThrow(MessageNotFoundException::new);
-        return new MessageDto(message.getId(), message.getContent(), message.getSender().getId(),
-                message.getRecipient().getId(), message.getChat().getId());
+    public Message findById(Long id) {
+        return messageRepository.findById(id).orElseThrow(MessageNotFoundException::new);
     }
 }

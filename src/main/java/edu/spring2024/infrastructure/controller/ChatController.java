@@ -1,10 +1,12 @@
 package edu.spring2024.infrastructure.controller;
 
 import edu.spring2024.app.ChatService;
-import edu.spring2024.app.dto.chat.ChatDto;
-import edu.spring2024.app.dto.chat.CreateChatRequest;
-import edu.spring2024.app.dto.chat.LeaveChatRequest;
-import edu.spring2024.app.dto.chat.SearchChatRequest;
+import edu.spring2024.domain.Chat;
+import edu.spring2024.infrastructure.assembler.mapper.dto.ChatDtoMapper;
+import edu.spring2024.infrastructure.controller.dto.chat.ChatDto;
+import edu.spring2024.infrastructure.controller.dto.chat.CreateChatRequest;
+import edu.spring2024.infrastructure.controller.dto.chat.LeaveChatRequest;
+import edu.spring2024.infrastructure.controller.dto.chat.SearchChatRequest;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -29,6 +31,8 @@ public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    private final ChatDtoMapper chatDtoMapper;
+
     @MessageMapping("/search-chat")
     public void searchChat(@Valid @Payload SearchChatRequest searchChatRequest) {
 
@@ -41,30 +45,32 @@ public class ChatController {
     @MessageMapping("/create-chat")
     public void createChat(@Valid @Payload CreateChatRequest createChatRequest) {
 
-        ChatDto chatDto = chatService.createChat(
+        Chat chat = chatService.createChat(
                 createChatRequest.userFrom(), createChatRequest.userTo(), createChatRequest.topic());
 
         messagingTemplate.convertAndSendToUser(
                 createChatRequest.userTo(), "/queue/reply",
-                chatDto
+                chatDtoMapper.toDto(chat)
         );
     }
 
     @DeleteMapping("/api/chat")
     @PreAuthorize("#leaveChatRequest.getUserId() == authentication.name")
     public ResponseEntity<ChatDto> leaveChat(@Valid LeaveChatRequest leaveChatRequest) {
-        ChatDto chatDto = chatService.leaveChat(leaveChatRequest.chatId(), leaveChatRequest.userId());
-        return ResponseEntity.ok(chatDto);
+        Chat chat = chatService.leaveChat(leaveChatRequest.chatId(), leaveChatRequest.userId());
+        return ResponseEntity.ok(chatDtoMapper.toDto(chat));
     }
 
     @GetMapping("/api/chat/{chatId}")
     @PostAuthorize("returnObject.getBody().getUserIds().contains(authentication.name)")
     public ResponseEntity<ChatDto> one(@NotNull @Min(1) @PathVariable Long chatId) {
-        return ResponseEntity.ok(chatService.findById(chatId));
+        return ResponseEntity.ok(chatDtoMapper.toDto(chatService.findById(chatId)));
     }
 
     @GetMapping("/api/chat/all")
     public ResponseEntity<List<ChatDto>> all(@Min(1) @RequestParam(required = false) String userId) {
-        return ResponseEntity.ok(chatService.findAll(userId));
+        return ResponseEntity.ok(chatService.findAll(userId).stream()
+                .map(chatDtoMapper::toDto)
+                .toList());
     }
 }

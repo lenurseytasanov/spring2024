@@ -1,18 +1,27 @@
 package edu.spring2024.services;
 
+import edu.spring2024.Spring2024Application;
 import edu.spring2024.app.UserService;
-import edu.spring2024.app.dto.user.UserDto;
 import edu.spring2024.domain.Chat;
+import edu.spring2024.domain.ChatTopic;
 import edu.spring2024.domain.User;
+import edu.spring2024.infrastructure.assembler.mapper.entity.ChatMapper;
+import edu.spring2024.infrastructure.assembler.mapper.entity.UserMapper;
+import edu.spring2024.infrastructure.configuration.ApplicationConfig;
+import edu.spring2024.infrastructure.db.adapter.UserAdapter;
+import edu.spring2024.infrastructure.db.entity.ChatEntity;
+import edu.spring2024.infrastructure.db.entity.UserEntity;
 import edu.spring2024.infrastructure.db.repository.JpaChatRepository;
 import edu.spring2024.infrastructure.db.repository.JpaUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -22,8 +31,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({ UserService.class })
+@Import({ UserService.class, ModelMapper.class, UserMapper.class, ChatMapper.class, UserAdapter.class })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@ContextConfiguration(classes = {Spring2024Application.class, ApplicationConfig.class})
 public class UserServiceTest {
 
     @Autowired
@@ -35,10 +45,15 @@ public class UserServiceTest {
     @Autowired
     private JpaUserRepository jpaUserRepository;
 
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private ChatMapper chatMapper;
+
     private static final String userId1 = "1";
     private static final String userId2 = "2";
     private static final Long chatId = 1L;
-
 
     @BeforeEach
     @Transactional
@@ -52,14 +67,20 @@ public class UserServiceTest {
                 .username("user2")
                 .build();
 
-        Chat chat = new Chat();
-
-        user1 = jpaUserRepository.save(user1);
-        jpaUserRepository.save(user2);
-        chat = jpaChatRepository.save(chat);
+        Chat chat = Chat.builder()
+                .topic(ChatTopic.NO_TOPIC)
+                .build();
 
         user1.getChats().add(chat);
         chat.getUsers().add(user1);
+
+        UserEntity userEntity1 = userMapper.toEntity(user1);
+        UserEntity userEntity2 = userMapper.toEntity(user2);
+        ChatEntity chatEntity = chatMapper.toEntity(chat);
+
+        jpaUserRepository.save(userEntity1);
+        jpaUserRepository.save(userEntity2);
+        jpaChatRepository.save(chatEntity);
     }
 
 
@@ -71,11 +92,11 @@ public class UserServiceTest {
         String username = "username";
 
         // Act
-        UserDto userDto = userService.createUser(userId, username);
+        User user = userService.createUser(userId, username);
 
         // Assert
-        assertEquals(userId, userDto.getUserId());
-        assertEquals(username, userDto.getUsername());
+        assertEquals(userId, user.getId());
+        assertEquals(username, user.getUsername());
         assertThrows(RuntimeException.class, () -> userService.createUser(userId1, username));
     }
 
@@ -85,10 +106,10 @@ public class UserServiceTest {
         // Arrange
         String userId = "3";
         // Act
-        UserDto userDto = userService.deleteUser(userId1);
+        User user = userService.deleteUser(userId1);
 
         // Assert
-        assertEquals(userId1, userDto.getUserId());
+        assertEquals(userId1, user.getId());
         assertThrows(RuntimeException.class, () -> userService.deleteUser(userId));
     }
 
@@ -98,10 +119,10 @@ public class UserServiceTest {
         // Arrange
         String userId = "3";
         // Act
-        UserDto userDto = userService.findBy(userId1);
+        User user = userService.findBy(userId1);
 
         // Assert
-        assertEquals(userId1, userDto.getUserId());
+        assertEquals(userId1, user.getId());
         assertThrows(RuntimeException.class, () -> userService.findBy(userId));
     }
 
@@ -112,7 +133,7 @@ public class UserServiceTest {
         List<String> expected = List.of(userId1, userId2);
 
         assertEquals(0, userService.findAll(emptyChatId).size());
-        assertEquals(expected, userService.findAll(null).stream().map(UserDto::getUserId).toList());
-        assertEquals(expected, userService.findAll(null).stream().map(UserDto::getUserId).toList());
+        assertEquals(expected, userService.findAll(null).stream().map(User::getId).toList());
+        assertEquals(expected, userService.findAll(null).stream().map(User::getId).toList());
     }
 }

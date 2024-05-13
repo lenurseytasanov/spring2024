@@ -7,11 +7,9 @@ import java.util.Optional;
 
 public interface UserRepository {
 
-    <S extends User> S save(S entity);
+    User save(User user);
 
     void delete(User user);
-
-    Optional<User> findByUsername(String username);
 
     Optional<User> findById(String id);
 
